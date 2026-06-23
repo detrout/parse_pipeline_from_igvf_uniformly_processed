@@ -65,9 +65,9 @@ rule curl_fa:
     resources:
         mem_gb = 4,
         threads = 1,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '4:00:00'
     params:
         link = lambda wc: get_fa_link(wc, config),
@@ -92,9 +92,9 @@ rule fa_ref_fmt:
     resources:
         threads = 4,
         mem_gb =16,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
         fa = "ref/genomes/{genotype}.fa.gz"
@@ -109,9 +109,9 @@ rule dl:
     resources:
         mem_gb = 4,
         threads = 1,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '4:00:00'
     shell:
         "wget -O {output.out} {params.link}"
@@ -135,9 +135,9 @@ rule kallisto_ind:
     resources:
         mem_gb = 64,
         threads = 12,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     conda:
         'envs/kb_env.yaml' 
@@ -172,9 +172,9 @@ rule symlink_fastq_r1:
     resources:
         mem_gb = 4,
         threads = 1,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
         fastq = config['raw']['fastq_r1']
@@ -189,9 +189,9 @@ rule symlink_fastq_r2:
     resources:
         mem_gb = 4,
         threads = 1,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
         fastq = config['raw']['fastq_r2']
@@ -219,9 +219,9 @@ rule klue_fa:
     resources:
         threads = 32,
         mem_gb = 128,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     output:
         fa = config['ref']['klue']['fa'],
@@ -248,9 +248,9 @@ rule klue_ind:
     resources:
         threads = 32,
         mem_gb = 128,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     output:
         ind = config['ref']['klue']['ind']
@@ -277,9 +277,9 @@ rule klue:
     resources:
         mem_gb = 64,
         threads = 24,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     conda:
         'envs/kb_env.yaml'  
@@ -317,9 +317,9 @@ rule make_adata_klue:
     resources:
         mem_gb = 128,
         threads = 4,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '1:00:00'
     input:
         mtx = config['klue']['mtx'],
@@ -347,9 +347,9 @@ rule klue_get_genotype_counts:
     resources:
         mem_gb = 64,
         threads = 2,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
         ofile = config['klue']['genotype_counts']
@@ -377,9 +377,9 @@ rule link_existing_unfilt_adata:
     resources:
         mem_gb = 4,
         threads = 1,
-        partition = 'standard',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['standard']['partition'],
+        account = config['queuing']['standard']['account'],
+        gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
 
     output:
@@ -407,9 +407,9 @@ rule cellbender:
     resources:
         mem_gb  = 128,
         threads = 1,
-        partition = "free-gpu",
-        account   = "seyedam_lab_gpu",
-        gres      = "gpu:1",
+        partition = config["queuing"]["gpu"]["partition"],
+        account   = config["queuing"]["gpu"]["account"],
+        gres      = config["queuing"]["gpu"]["gres"],
         time      = "8:00:00"
     output:
         filt_h5   = config['cellbender']['filt_h5'],    # e.g. cellbender/{plate}/{subpool}/adata_denoised_filtered.h5
@@ -481,9 +481,9 @@ PY
 #    resources:
 #        mem_gb = 4,
 #        threads = 1,
-#        partition = 'standard',
-#        account = 'CCBS_LAB',
-#        gres = '',
+#        partition = config['queuing']['standard']['partition'],
+#        account = config['queuing']['standard']['account'],
+#        gres = config['queuing']['standard']['gres'],
 #        time = '1:00:00'
 #    output:
 #        metrics_copy = config['cellbender']['metrics_copy']
@@ -502,9 +502,9 @@ rule make_filt_adata:
     resources:
         mem_gb = 128,
         threads = 4,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '1:00:00'
     input:
         filt_h5 = config['cellbender']['filt_h5'],
@@ -533,9 +533,9 @@ rule make_tissue_adata:
     resources:
         mem_gb = 256,
         threads = 2,
-        partition = 'highmem',
-        account = 'CCBS_LAB',
-        gres = '',
+        partition = config['queuing']['highmem']['partition'],
+        account = config['queuing']['highmem']['account'],
+        gres = config['queuing']['highmem']['gres'],
         time = '2:00:00'
     output:
         adata = config['tissue']['adata']

@@ -1,3 +1,17 @@
+queuing:
+  standard:
+    partition: "standard"
+    account: "CCBS_LAB"
+    gres: ""
+  highmem:
+    partition: "highmem"
+    account: "CCBS_LAB"
+    gres: ""
+  gpu:
+    partition: "free-gpu"
+    account: "seyedam_lab_gpu"
+    gres: "gpu:1"
+
 ref:
   annot_link: https://api.data.igvf.org/reference-files/IGVFFI4777RDZK/@@download/IGVFFI4777RDZK.gtf.gz
   annot: ref/gencode.vM36.gtf.gz
