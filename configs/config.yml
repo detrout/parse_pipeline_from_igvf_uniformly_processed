@@ -29,3 +29,9 @@ ref:
       AJ: https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/accession/GCA_029255665.1/download?include_annotation_type=GENOME_FASTA&filename=
       129S1J: https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/accession/GCA_029255695.1/download?include_annotation_type=GENOME_FASTA&filename=
       B6J: https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M36/GRCm39.genome.fa.gz
+
+analysis:
+  sample_metadata: 'configs/sample_metadata.csv'
+  analysis_config: 'igvf_b01_uniform.tsv'
+  kit: 'WT'  # either WT (48 wells), WT_mini (12 wells), or WT_mega (96 wells)
+  chemistry: 'v2'   # v1, v2, and v3 are supported

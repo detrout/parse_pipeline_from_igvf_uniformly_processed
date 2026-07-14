@@ -1,16 +1,14 @@
 import pandas as pd
 
 from utils import *
-######## Only need to edit this part ########
-config_tsv = 'configs/igvf_018_config.tsv'
-sample_csv = 'configs/sample_metadata.csv'
-
-kit = 'WT_mega'  # either WT (48 wells), WT_mini (12 wells), or WT_mega (96 wells)
-chemistry = 'v2'  # v1, v2, and v3 are supported
-
-######## Do not change anything past this point ########
-
+######## Everything should be configured via the configfile ########
 configfile: 'configs/config.yml'
+
+config_tsv = config['analysis']['analysis_config']
+sample_csv = config['analysis']['sample_metadata']
+
+kit = config['analysis']['kit']
+chemistry = config['analysis']['chemistry']
 
 # read in config / analysis spec
 df = parse_config(config_tsv)
