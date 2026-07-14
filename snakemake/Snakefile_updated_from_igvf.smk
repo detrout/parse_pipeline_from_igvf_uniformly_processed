@@ -1,8 +1,5 @@
 import pandas as pd
 
-p = os.path.dirname(os.getcwd())
-sys.path.append(p)
-
 from utils import *
 ######## Only need to edit this part ########
 config_tsv = 'configs/igvf_018_config.tsv'
