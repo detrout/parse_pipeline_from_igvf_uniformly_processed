@@ -424,14 +424,14 @@ rule cellbender:
         metrics   = "cellbender/{plate}/{subpool}/adata_denoised_metrics.csv",
     log:
         "logs/cellbender/{plate}/{subpool}.log"
+    conda:
+        'envs/cellbender.yaml'
     shell:
         r"""
         set -euo pipefail
         mkdir -p "$(dirname {output.unfilt_h5})" "$(dirname {log})"
 
         set +u
-        eval "$(conda shell.bash hook)"
-        conda activate cellbender
         set -u
 
         INP="$(python - <<'PY'
