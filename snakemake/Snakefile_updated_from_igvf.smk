@@ -37,20 +37,29 @@ wildcard_constraints:
     mult_genotype_2='|'.join([re.escape(x) for x in mult_genotype_2s])
 
 
+# these patterns needed to be defined before the all rule so I can't
+# use the rules.${rule}.output.${variable} convention because they're
+# not defined yet.  but I still want the patterns in the snakemake and
+# to not repeat myself.
+KLUE_IND_OUTPUT = "ref/klue/{mult_genotype_1}_{mult_genotype_2}.idx"
+KLUE_GET_GENOTYPE_COUNTS_OUTPUT = "pipeline_output_klue/{plate}/{subpool}/genotype_counts.tsv"
+MAKE_TISSUE_ADATA_OUTPUT = "{plate}/{tissue}/adata.h5ad"
+COPY_CELLBENDER_METRICS = "pipeline_output_cellbender/{plate}/{subpool}/adata_denoised_metrics.csv"
+
 rule all:
     input:
-        expand(config['ref']['klue']['ind'],
+        expand(KLUE_IND_OUTPUT,
                zip,
                mult_genotype_1=[g for g in mult_genotype_1s if g in get_founder_genotypes()],
                mult_genotype_2=[g for g in mult_genotype_2s if g in get_founder_genotypes()]),
-        expand(config['klue']['genotype_counts'],
+        expand(KLUE_GET_GENOTYPE_COUNTS_OUTPUT,
                 zip,
                 plate=df.plate.tolist(),
                 subpool=df.subpool.tolist()),
-        expand(config['tissue']['adata'],
+        expand(MAKE_TISSUE_ADATA_OUTPUT,
                 plate=df.plate.tolist(),
                 tissue=get_subset_tissues(df, sample_df)),
-#        expand(config['cellbender']['metrics_copy'],
+#        expand(COPY_CELLBENDER_METRICS, #rules.copy_cellbender_metrics.output.metrics_copy,
 #               plate=df.plate.tolist(),
 #               subpool=df.subpool.tolist())
 
@@ -127,8 +136,8 @@ use rule dl as dl_fa with:
 
 rule kallisto_ind:
     input:
-        annot = config['ref']['annot'],
-        fa = config['ref']['fa']
+        annot = rules.dl_annot.output.out,
+        fa = rules.dl_fa.output.out
     resources:
         mem_gb = 64,
         threads = 12,
@@ -139,12 +148,12 @@ rule kallisto_ind:
     conda:
         'envs/kb_env.yaml' 
     output:
-        t2g = config['ref']['kallisto']['t2g'],
-        ind = config['ref']['kallisto']['ind'],
-        fa = config['ref']['kallisto']['fa'],
-        na = config['ref']['kallisto']['na'],
-        c1 = config['ref']['kallisto']['c1'],
-        c2 = config['ref']['kallisto']['c2']
+        t2g = "ref/kallisto/c57bl6j.t2g",
+        ind = "ref/kallisto/c57bl6j.idx",
+        fa = "ref/kallisto/c57bl6j.cdna.fasta",
+        na = "ref/kallisto/c57bl6j.nascent.fasta",
+        c1 = "ref/kallisto/c57bl6j.c1",
+        c2 = "ref/kallisto/c57bl6j.c2",
     shell:
         """        
         kb ref \
@@ -174,7 +183,7 @@ rule symlink_fastq_r1:
         gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
-        fastq = config['raw']['fastq_r1']
+        fastq = "fastq/{plate}_{subpool}_{run}_{lane}_R1_001.fastq.gz",
     shell:
         """
         ln -s {params.fastq} {output.fastq}
@@ -191,7 +200,7 @@ rule symlink_fastq_r2:
         gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
-        fastq = config['raw']['fastq_r2']
+        fastq = "fastq/{plate}_{subpool}_{run}_{lane}_R2_001.fastq.gz",
     shell:
         """
         ln -s {params.fastq} {output.fastq}
@@ -205,12 +214,12 @@ rule symlink_fastq_r2:
 
 rule klue_fa:
     input:
-        fa_g1 = lambda wc: expand(config['ref']['genome']['fa'],
+        fa_g1 = lambda wc: expand(rules.fa_ref_fmt.output.fa,
                     genotype=wc.mult_genotype_1)[0],
-        fa_g2 = lambda wc: expand(config['ref']['genome']['fa'],
+        fa_g2 = lambda wc: expand(rules.fa_ref_fmt.output.fa,
                     genotype=wc.mult_genotype_2)[0]
     params:
-        temp = config['ref']['klue']['temp']
+        temp = "ref/klue/{mult_genotype_1}_{mult_genotype_2}"
     conda:
         'envs/kb_env.yaml'  
     resources:
@@ -221,8 +230,8 @@ rule klue_fa:
         gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     output:
-        fa = config['ref']['klue']['fa'],
-        t2g = config['ref']['klue']['t2g']
+        fa = "ref/klue/{mult_genotype_1}_{mult_genotype_2}.fa",
+        t2g = "ref/klue/{mult_genotype_1}_{mult_genotype_2}.t2g",
     shell:
         """
         klue distinguish \
@@ -237,9 +246,9 @@ rule klue_fa:
 
 rule klue_ind:
     input:
-        fa = config['ref']['klue']['fa']
+        fa = rules.klue_fa.output.fa
     params:
-        temp = config['ref']['klue']['temp']
+        temp = rules.klue_fa.params.temp
     conda:
         'envs/kb_env.yaml'  
     resources:
@@ -250,7 +259,7 @@ rule klue_ind:
         gres = config['queuing']['highmem']['gres'],
         time = '4:00:00'
     output:
-        ind = config['ref']['klue']['ind']
+        ind = KLUE_IND_OUTPUT
     shell:
         """
         kb ref \
@@ -266,11 +275,11 @@ rule klue:
     input:
         r1_fastq = lambda wc:get_subpool_fastqs(wc, df, config, how='list', read='R1'),
         r2_fastq = lambda wc:get_subpool_fastqs(wc, df, config, how='list', read='R2'),
-        t2g = config['ref']['klue']['t2g'],
-        ind = config['ref']['klue']['ind']
+        t2g = rules.klue_fa.output.t2g,
+        ind = rules.klue_ind.output.ind
     params:
         fastq_str = lambda wc:get_subpool_fastqs(wc, df, config, how='str'),
-        odir = config['klue']['cgb'].split('counts_unfiltered_modified/')[0]
+        odir = lambda output: output.cgb.split('counts_unfiltered_modified')[0],
     resources:
         mem_gb = 64,
         threads = 24,
@@ -281,14 +290,14 @@ rule klue:
     conda:
         'envs/kb_env.yaml'  
     output:
-        config['klue']['cgb'],
-        config['klue']['cggn'],
-        config['klue']['cgg'],
-        config['klue']['adata'],
-        config['klue']['mtx'],
-        temporary(config['klue']['bus']),
-        temporary(config['klue']['bus_modified_unfilt']),
-        temporary(config['klue']['bus_unfilt'])
+        cgb="klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/counts_unfiltered_modified/cells_x_genes.barcodes.txt",
+        cggn="klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/counts_unfiltered_modified/cells_x_genes.genes.names.txt",
+        cgg="klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/counts_unfiltered_modified/cells_x_genes.genes.txt",
+        adata="klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/counts_unfiltered_modified/adata.h5ad",
+        mtx="klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/counts_unfiltered_modified/cells_x_genes.mtx",
+        bus=temporary("klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/output.bus"),
+        bus_modified_unfilt=temporary("klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/output_modified.unfiltered.bus"),
+        bus_unfilt=temporary("klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/output.unfiltered.bus"),
     shell:
         """
         kb count \
@@ -319,12 +328,12 @@ rule make_adata_klue:
         gres = config['queuing']['highmem']['gres'],
         time = '1:00:00'
     input:
-        mtx = config['klue']['mtx'],
-        cgb = config['klue']['cgb'],
-        cggn = config['klue']['cggn'],
-        cgg = config['klue']['cgg']
+        mtx = rules.klue.output.mtx,
+        cgb = rules.klue.output.cgb,
+        cggn = rules.klue.output.cggn,
+        cgg = rules.klue.output.cgg,
     output:
-        adata = config['klue']['unfilt_adata']
+        adata = "pipeline_output_klue/{plate}/{subpool}/{mult_genotype_1}_{mult_genotype_2}/unfiltered_adata.h5ad",
     run:
         add_meta_klue(input.mtx,
                         input.cgb,
@@ -340,7 +349,7 @@ rule make_adata_klue:
 # get counts for each cell across all genotypes
 rule klue_get_genotype_counts:
     input:
-        adatas = lambda wc:get_subpool_adatas(df, sample_df, wc, config['klue']['unfilt_adata'])
+        adatas = lambda wc:get_subpool_adatas(df, sample_df, wc, rules.make_adata_klue.output.adata)
     resources:
         mem_gb = 64,
         threads = 2,
@@ -349,7 +358,7 @@ rule klue_get_genotype_counts:
         gres = config['queuing']['standard']['gres'],
         time = '1:00:00'
     output:
-        ofile = config['klue']['genotype_counts']
+        ofile = KLUE_GET_GENOTYPE_COUNTS_OUTPUT
     run:
         get_genotype_counts(input.adatas, output.ofile)
 
@@ -380,7 +389,7 @@ rule link_existing_unfilt_adata:
         time = '1:00:00'
 
     output:
-        unfilt_adata = config['kallisto']['unfilt_adata']
+        unfilt_adata = "pipeline_output_kallisto/{plate}/{subpool}/unfiltered_adata.h5ad",
     shell:
         """
         mkdir -p $(dirname {output.unfilt_adata})
@@ -396,7 +405,7 @@ rule link_existing_unfilt_adata:
 
 rule cellbender:
     input:
-        raw_adata = config['kallisto']['unfilt_adata']
+        raw_adata = rules.link_existing_unfilt_adata.output.unfilt_adata
     params:
         total_drops    = lambda wc: int(df.loc[df.subpool.eq(wc.subpool), 'droplets_included'].iloc[0]),
         learning_rate  = lambda wc: float(df.loc[df.subpool.eq(wc.subpool), 'learning_rate'].iloc[0]),
@@ -409,9 +418,9 @@ rule cellbender:
         gres      = config["queuing"]["gpu"]["gres"],
         time      = "8:00:00"
     output:
-        filt_h5   = config['cellbender']['filt_h5'],    # e.g. cellbender/{plate}/{subpool}/adata_denoised_filtered.h5
-        unfilt_h5 = config['cellbender']['unfilt_h5'],  # e.g. cellbender/{plate}/{subpool}/adata_denoised.h5
-        metrics   = config['cellbender']['metrics']
+        filt_h5   = "cellbender/{plate}/{subpool}/adata_denoised_filtered.h5",
+        unfilt_h5 = "cellbender/{plate}/{subpool}/adata_denoised.h5",
+        metrics   = "cellbender/{plate}/{subpool}/adata_denoised_metrics.csv",
     log:
         "logs/cellbender/{plate}/{subpool}.log"
     shell:
@@ -474,7 +483,7 @@ PY
 
 #rule copy_cellbender_metrics:
 #    input:
-#        metrics = config['cellbender']['metrics']
+#        metrics = rules.cellbender.output.metrics
 #    resources:
 #        mem_gb = 4,
 #        threads = 1,
@@ -483,7 +492,7 @@ PY
 #        gres = config['queuing']['standard']['gres'],
 #        time = '1:00:00'
 #    output:
-#        metrics_copy = config['cellbender']['metrics_copy']
+#        metrics_copy = COPY_CELLBENDER_METRICS
 #    shell:
 #        """
 #        mkdir -p $(dirname {output.metrics_copy})
@@ -504,11 +513,11 @@ rule make_filt_adata:
         gres = config['queuing']['highmem']['gres'],
         time = '1:00:00'
     input:
-        filt_h5 = config['cellbender']['filt_h5'],
-        unfilt_adata = config['kallisto']['unfilt_adata'],
-        genotype_counts = config['klue']['genotype_counts']
+        filt_h5 = rules.cellbender.output.filt_h5,
+        unfilt_adata = rules.link_existing_unfilt_adata.output.unfilt_adata,
+        genotype_counts = rules.klue_get_genotype_counts.output.ofile,
     output:
-        filt_adata = config['cellbender']['filt_adata']
+        filt_adata = "pipeline_output_cellbender/{plate}/{subpool}/filtered_adata_denoised.h5ad",
     run:
         add_meta_filter(input.filt_h5,
                         input.unfilt_adata,
@@ -526,7 +535,7 @@ rule make_filt_adata:
 
 rule make_tissue_adata:
     input:
-        adatas = lambda wc:get_tissue_adatas(df, sample_df, wc, config['cellbender']['filt_adata'])
+        adatas = lambda wc:get_tissue_adatas(df, sample_df, wc, rules.make_filt_adata.output.filt_adata)
     resources:
         mem_gb = 256,
         threads = 2,
@@ -535,6 +544,6 @@ rule make_tissue_adata:
         gres = config['queuing']['highmem']['gres'],
         time = '2:00:00'
     output:
-        adata = config['tissue']['adata']
+        adata = MAKE_TISSUE_ADATA_OUTPUT,
     run:
         concat_large_adatas(input.adatas, output.adata)
