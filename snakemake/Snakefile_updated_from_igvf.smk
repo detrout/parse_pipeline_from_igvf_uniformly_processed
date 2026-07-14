@@ -410,6 +410,7 @@ rule cellbender:
         total_drops    = lambda wc: int(df.loc[df.subpool.eq(wc.subpool), 'droplets_included'].iloc[0]),
         learning_rate  = lambda wc: float(df.loc[df.subpool.eq(wc.subpool), 'learning_rate'].iloc[0]),
         expected_cells = lambda wc: int(df.loc[df.subpool.eq(wc.subpool), 'expected_cells'].iloc[0]),
+        use_cuda = '--cuda' if config['queuing']['gpu']['has_cuda'] else '',
     resources:
         mem_gb  = 128,
         threads = 1,
@@ -451,7 +452,7 @@ PY
             --total-droplets-included {params.total_drops} \
             --learning-rate {params.learning_rate} \
             --expected-cells {params.expected_cells} \
-            --cuda
+            {params.use_cuda}
         ) 2>&1 | tee "{log}"
 
         python - <<'PY'

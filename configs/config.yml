@@ -11,6 +11,7 @@ queuing:
     partition: "free-gpu"
     account: "seyedam_lab_gpu"
     gres: "gpu:1"
+    has_cuda: False
 
 ref:
   annot_link: https://api.data.igvf.org/reference-files/IGVFFI4777RDZK/@@download/IGVFFI4777RDZK.gtf.gz
