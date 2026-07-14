@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import scipy.sparse as sp
@@ -63,7 +64,7 @@ def get_bc_round_set(kit, chemistry):
 
 
 def get_bc1_matches(kit, chemistry):
-    pkg_path = os.path.dirname(os.path.dirname(__file__))
+    pkg_path = Path(__file__).parent / '..'
     bc_round_set = get_bc_round_set(kit, chemistry)
 
     # determine file to use
@@ -73,7 +74,7 @@ def get_bc1_matches(kit, chemistry):
 
     # read in and restructure such that each dt bc is
     # matched with its randhex partner from the same well
-    fname = pkg_path+'/barcodes/bc_data_{}.csv'.format(ver)
+    fname = pkg_path / 'barcodes/bc_data_{}.csv'.format(ver)
     df = pd.read_csv(fname)
     
     if chemistry == "v3":
@@ -95,7 +96,7 @@ def get_bcs(bc, kit, chemistry):
     Parameters:
         bc (int): {1,2,3}
     """
-    pkg_path = os.path.dirname(os.path.dirname(__file__))
+    pkg_path = Path(__file__).parent / ".."
     bc_round_set = get_bc_round_set(kit, chemistry)
 
     bc_name = f'bc{bc}'
@@ -105,7 +106,7 @@ def get_bcs(bc, kit, chemistry):
         if entry[0] == bc_name:
             ver = entry[1]
 
-    fname = pkg_path+'/barcodes/bc_data_{}.csv'.format(ver)
+    fname = pkg_path / 'barcodes/bc_data_{}.csv'.format(ver)
     df = pd.read_csv(fname)
     
     if chemistry == "v3":
@@ -130,11 +131,11 @@ def create_r1_RT_replace(kit, chemistry, ofile):
     # Use the get_bc_round_set function to get the appropriate bc_round_set
     bc_round_set = get_bc_round_set(kit, chemistry)
     bc, file_suffix = bc_round_set[0]  # Only use the first entry, which corresponds to bc1
-    
-    pkg_path = os.path.dirname(__file__)
-    bc_path = '/'.join(pkg_path.split('/')[:-1])+'/barcodes/'
-    filename = bc_path + f"bc_data_{file_suffix}.csv"
-    
+
+    pkg_path = Path(__file__).parent / '..'
+    bc_path = pkg_path / 'barcodes'
+    filename = bc_path / f"bc_data_{file_suffix}.csv"
+
     df = pd.read_csv(filename)
     
     if chemistry == "v3":
@@ -164,9 +165,9 @@ def create_r1r2r3_file(kit, chemistry, ofile):
     
     # Get barcode files based on kit and chemistry
     bc_round_set = get_bc_round_set(kit, chemistry)
-    pkg_path = os.path.dirname(__file__)
-    bc_path = os.path.join(pkg_path, '..', 'barcodes')
-    bc_files = {bc[0]: os.path.join(bc_path, f"bc_data_{bc[1]}.csv") for bc in bc_round_set}
+    pkg_path = Path(__file__).parent / '..'
+    bc_path = pkg_path / 'barcodes'
+    bc_files = {bc[0]: bc_path / f"bc_data_{bc[1]}.csv" for bc in bc_round_set}
         
     # Read barcode data
     bc_data = {}
