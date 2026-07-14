@@ -115,15 +115,15 @@ rule dl:
 
 use rule dl as dl_annot with:
     params:
-        link = config['ref']['annot_link']
+        link = config['ref']['annot_link'],
     output:
-        out = config['ref']['annot']
+        out = 'ref/gencode.v{}.gtf.gz'.format(config['ref']['annot_version']),
 
 use rule dl as dl_fa with:
     params:
-        link = config['ref']['fa_link']
+        link = config['ref']['fa_link'],
     output:
-        out = config['ref']['fa']
+        out = 'ref/{}.fa.gz'.format(config['ref']['fa_version']),
 
 rule kallisto_ind:
     input:

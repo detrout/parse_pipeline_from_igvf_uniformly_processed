@@ -14,9 +14,9 @@ queuing:
 
 ref:
   annot_link: https://api.data.igvf.org/reference-files/IGVFFI4777RDZK/@@download/IGVFFI4777RDZK.gtf.gz
-  annot: ref/gencode.vM36.gtf.gz
+  annot_version: M36
   fa_link: https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.fa.gz
-  fa: ref/mm39.fa.gz
+  fa_version: mm39
 
   genome:
     link:
