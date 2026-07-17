@@ -66,9 +66,9 @@ rule all:
 ################################################################################
 
 rule curl_fa:
+    threads: 1
     resources:
         mem_gb = 4,
-        threads = 1,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -93,8 +93,8 @@ rule curl_fa:
 rule fa_ref_fmt:
     input:
         zip = "{genotype}.zip"
+    threads: 2
     resources:
-        threads = 4,
         mem_gb =16,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
@@ -110,9 +110,9 @@ rule fa_ref_fmt:
         """
 
 rule dl:
+    threads: 1
     resources:
         mem_gb = 4,
-        threads = 1,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -136,9 +136,9 @@ rule kallisto_ind:
     input:
         annot = rules.dl_annot.output.out,
         fa = rules.dl_fa.output.out
+    threads: 12
     resources:
         mem_gb = 64,
-        threads = 12,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -155,6 +155,7 @@ rule kallisto_ind:
     shell:
         """        
         kb ref \
+            -t {threads} \
             --workflow=nac \
             -i {output.ind} \
             -g {output.t2g} \
@@ -173,9 +174,9 @@ rule kallisto_ind:
 rule symlink_fastq_r1:
     params:
         fastq = lambda wc:get_df_info(wc, df, 'fastq')
+    threads: 1
     resources:
         mem_gb = 4,
-        threads = 1,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -190,9 +191,9 @@ rule symlink_fastq_r1:
 rule symlink_fastq_r2:
     params:
         fastq = lambda wc:get_df_info(wc, df, 'fastq_r2')
+    threads: 1
     resources:
         mem_gb = 4,
-        threads = 1,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -220,8 +221,8 @@ rule klue_fa:
         temp = "ref/klue/{mult_genotype_1}_{mult_genotype_2}"
     conda:
         'envs/kb_env.yaml'
+    threads: 32
     resources:
-        threads = 32,
         mem_gb = 128,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
@@ -235,7 +236,7 @@ rule klue_fa:
         klue distinguish \
             -o {output.fa} \
             -g {output.t2g} \
-            -t 24 \
+            -t {threads} \
             -r 61 \
             --all-but-one \
             --tmp {params.temp}/ \
@@ -249,8 +250,8 @@ rule klue_ind:
         temp = rules.klue_fa.params.temp
     conda:
         'envs/kb_env.yaml'  
+    threads: 32
     resources:
-        threads = 32,
         mem_gb = 128,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
@@ -264,7 +265,7 @@ rule klue_ind:
             --workflow=custom \
             --distinguish \
             -i {output.ind} \
-            -t {resources.threads} \
+            -t {threads} \
             --tmp {params.temp}/ \
             {input.fa}
         """
@@ -278,9 +279,9 @@ rule klue:
     params:
         fastq_str = lambda wc:get_subpool_fastqs(wc, df, config, how='str'),
         odir = lambda output: output.cgb.split('counts_unfiltered_modified')[0],
+    threads: 24
     resources:
         mem_gb = 64,
-        threads = 24,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -309,7 +310,7 @@ rule klue:
             -g {input.t2g} \
             -x SPLIT-SEQ \
             -i {input.ind} \
-            -t {resources.threads} \
+            -t {threads} \
             -o {params.odir} \
             --tmp {params.odir}/temp/ \
             --verbose \
@@ -318,9 +319,9 @@ rule klue:
 
 # add metadata
 rule make_adata_klue:
+    threads: 4
     resources:
         mem_gb = 128,
-        threads = 4,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -348,9 +349,9 @@ rule make_adata_klue:
 rule klue_get_genotype_counts:
     input:
         adatas = lambda wc:get_subpool_adatas(df, sample_df, wc, rules.make_adata_klue.output.adata)
+    threads: 2
     resources:
         mem_gb = 64,
-        threads = 2,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -377,10 +378,9 @@ rule link_existing_unfilt_adata:
             (df.subpool == wc.subpool),
             'igvf_adata'
         ].iloc[0]
-
+    threads: 1
     resources:
         mem_gb = 4,
-        threads = 1,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -409,9 +409,9 @@ rule cellbender:
         learning_rate  = lambda wc: float(df.loc[df.subpool.eq(wc.subpool), 'learning_rate'].iloc[0]),
         expected_cells = lambda wc: int(df.loc[df.subpool.eq(wc.subpool), 'expected_cells'].iloc[0]),
         use_cuda = '--cuda' if config['queuing']['gpu']['has_cuda'] else '',
+    threads: 1
     resources:
         mem_gb  = 128,
-        threads = 1,
         partition = config["queuing"]["gpu"]["partition"],
         account   = config["queuing"]["gpu"]["account"],
         gres      = config["queuing"]["gpu"]["gres"],
@@ -483,9 +483,9 @@ PY
 #rule copy_cellbender_metrics:
 #    input:
 #        metrics = rules.cellbender.output.metrics
+#    threads: 1
 #    resources:
 #        mem_gb = 4,
-#        threads = 1,
 #        partition = config['queuing']['standard']['partition'],
 #        account = config['queuing']['standard']['account'],
 #        gres = config['queuing']['standard']['gres'],
@@ -504,9 +504,9 @@ PY
 #####################################################################################################
 
 rule make_filt_adata:
+    threads: 4
     resources:
         mem_gb = 128,
-        threads = 4,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -535,9 +535,9 @@ rule make_filt_adata:
 rule make_tissue_adata:
     input:
         adatas = lambda wc:get_tissue_adatas(df, sample_df, wc, rules.make_filt_adata.output.filt_adata)
+    threads: 2
     resources:
         mem_gb = 256,
-        threads = 2,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
