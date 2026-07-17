@@ -219,7 +219,7 @@ rule klue_fa:
     params:
         temp = "ref/klue/{mult_genotype_1}_{mult_genotype_2}"
     conda:
-        'envs/kb_env.yaml'  
+        'envs/kb_env.yaml'
     resources:
         threads = 32,
         mem_gb = 128,
