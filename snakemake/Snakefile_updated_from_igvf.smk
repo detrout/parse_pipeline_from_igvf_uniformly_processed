@@ -1,6 +1,9 @@
 import pandas as pd
 
 from utils import *
+
+BYTES_TO_MB = 1048576   # divide by this to convert from bytes to megabytes
+
 ######## Everything should be configured via the configfile ########
 configfile: 'configs/config.yml'
 
@@ -68,7 +71,7 @@ rule all:
 rule curl_fa:
     threads: 1
     resources:
-        mem_gb = 4,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -95,7 +98,7 @@ rule fa_ref_fmt:
         zip = "{genotype}.zip"
     threads: 2
     resources:
-        mem_gb =16,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -112,7 +115,7 @@ rule fa_ref_fmt:
 rule dl:
     threads: 1
     resources:
-        mem_gb = 4,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -138,7 +141,7 @@ rule kallisto_ind:
         fa = rules.dl_fa.output.out
     threads: 12
     resources:
-        mem_gb = 64,
+        mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -176,7 +179,7 @@ rule symlink_fastq_r1:
         fastq = lambda wc:get_df_info(wc, df, 'fastq')
     threads: 1
     resources:
-        mem_gb = 4,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -193,7 +196,7 @@ rule symlink_fastq_r2:
         fastq = lambda wc:get_df_info(wc, df, 'fastq_r2')
     threads: 1
     resources:
-        mem_gb = 4,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -223,7 +226,7 @@ rule klue_fa:
         'envs/kb_env.yaml'
     threads: 32
     resources:
-        mem_gb = 128,
+        mem_mb = 16384,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -252,7 +255,7 @@ rule klue_ind:
         'envs/kb_env.yaml'  
     threads: 32
     resources:
-        mem_gb = 128,
+        mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -281,7 +284,7 @@ rule klue:
         odir = lambda output: output.cgb.split('counts_unfiltered_modified')[0],
     threads: 24
     resources:
-        mem_gb = 64,
+        mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -321,7 +324,7 @@ rule klue:
 rule make_adata_klue:
     threads: 4
     resources:
-        mem_gb = 128,
+        mem_mb = lambda wildcards, input, attempt: (input.size // BYTES_TO_MB) * 2,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -351,7 +354,7 @@ rule klue_get_genotype_counts:
         adatas = lambda wc:get_subpool_adatas(df, sample_df, wc, rules.make_adata_klue.output.adata)
     threads: 2
     resources:
-        mem_gb = 64,
+        mem_mb = lambda wildcards, input, attempt: (input.size // BYTES_TO_MB) * 3,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -380,7 +383,7 @@ rule link_existing_unfilt_adata:
         ].iloc[0]
     threads: 1
     resources:
-        mem_gb = 4,
+        mem_mb = 4096,
         partition = config['queuing']['standard']['partition'],
         account = config['queuing']['standard']['account'],
         gres = config['queuing']['standard']['gres'],
@@ -411,7 +414,7 @@ rule cellbender:
         use_cuda = '--cuda' if config['queuing']['gpu']['has_cuda'] else '',
     threads: 1
     resources:
-        mem_gb  = 128,
+        mem_mb  = lambda wildcards, input, attempt: (input.size // BYTES_TO_MB) * 6,
         partition = config["queuing"]["gpu"]["partition"],
         account   = config["queuing"]["gpu"]["account"],
         gres      = config["queuing"]["gpu"]["gres"],
@@ -485,7 +488,7 @@ PY
 #        metrics = rules.cellbender.output.metrics
 #    threads: 1
 #    resources:
-#        mem_gb = 4,
+#        mem_mb = 4096,
 #        partition = config['queuing']['standard']['partition'],
 #        account = config['queuing']['standard']['account'],
 #        gres = config['queuing']['standard']['gres'],
@@ -506,7 +509,7 @@ PY
 rule make_filt_adata:
     threads: 4
     resources:
-        mem_gb = 128,
+        mem_mb = lambda wildcards, input, attempt: (input.size // BYTES_TO_MB) * 4,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
@@ -537,7 +540,7 @@ rule make_tissue_adata:
         adatas = lambda wc:get_tissue_adatas(df, sample_df, wc, rules.make_filt_adata.output.filt_adata)
     threads: 2
     resources:
-        mem_gb = 256,
+        mem_mb = lambda wildcards, input, attempt: (input.size // BYTES_TO_MB) * 2,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
