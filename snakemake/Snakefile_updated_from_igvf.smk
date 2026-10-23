@@ -224,7 +224,7 @@ rule klue_fa:
         temp = "ref/klue/{mult_genotype_1}_{mult_genotype_2}"
     conda:
         'envs/kb_env.yaml'
-    threads: 32
+    threads: 24
     resources:
         mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
@@ -253,7 +253,7 @@ rule klue_ind:
         temp = rules.klue_fa.params.temp
     conda:
         'envs/kb_env.yaml'  
-    threads: 32
+    threads: 24
     resources:
         mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
