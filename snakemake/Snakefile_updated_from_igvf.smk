@@ -426,7 +426,7 @@ rule cellbender:
     log:
         "logs/cellbender/{plate}/{subpool}.log"
     conda:
-        'envs/cellbender.yaml'
+        'envs/kb_env.yaml'
     shell:
         r"""
         set -euo pipefail
