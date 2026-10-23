@@ -226,7 +226,7 @@ rule klue_fa:
         'envs/kb_env.yaml'
     threads: 32
     resources:
-        mem_mb = 16384,
+        mem_mb = 32768,
         partition = config['queuing']['highmem']['partition'],
         account = config['queuing']['highmem']['account'],
         gres = config['queuing']['highmem']['gres'],
