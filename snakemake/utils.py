@@ -765,9 +765,9 @@ def add_meta_filter(filt_h5,
     ############# 1. Add barcode and sample metadata #############
     print('Adding barcode and sample information...')
     adata = anndata_from_h5(filt_h5)
-
-    adata.obs['bc'] = adata.obs.index
     adata.var['gene_id'] = adata.var.index
+    adata.obs['bc'] = adata.obs.index.str.split('_').str[0]
+    adata.obs.index = adata.obs['bc']
     adata.obs['bc1_sequence'] = adata.obs['bc'].apply(get_bc1)
     adata.obs['bc2_sequence'] = adata.obs['bc'].apply(get_bc2)
     adata.obs['bc3_sequence'] = adata.obs['bc'].apply(get_bc3)
