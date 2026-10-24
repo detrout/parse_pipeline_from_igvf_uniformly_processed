@@ -775,6 +775,7 @@ def add_meta_filter(filt_h5,
     adata.obs['subpool'] = wc.subpool
 
     # merge in bc1 information
+    bc_df = get_bc1_matches(kit, chemistry)
     temp = bc_df.copy(deep=True)
     temp = temp[['bc1_dt', 'well']].rename({'bc1_dt': 'bc1_sequence', 'well': 'bc1_well'}, axis=1)
     adata.obs = adata.obs.merge(temp, how='left', on='bc1_sequence')
@@ -809,9 +810,41 @@ def add_meta_filter(filt_h5,
     ############# 3. Add raw counts as a layer #############
     # store raw data as a layer
     adata_raw = sc.read_h5ad(unfilt_adata)
+    adata_raw.var['gene_id'] = adata_raw.var.index
     sc.pp.calculate_qc_metrics(adata_raw, percent_top=None, log1p=False, inplace=True)
 
     adata_raw.var_names = adata_raw.var['gene_id']
+
+    adata_raw.obs['bc'] = adata_raw.obs.index.str.split('_').str[0]
+    adata_raw.obs.index = adata_raw.obs['bc']
+
+    adata_raw.obs['bc1_sequence'] = adata_raw.obs['bc'].apply(get_bc1)
+    adata_raw.obs['bc2_sequence'] = adata_raw.obs['bc'].apply(get_bc2)
+    adata_raw.obs['bc3_sequence'] = adata_raw.obs['bc'].apply(get_bc3)
+
+    # merge in bc1 information
+    bc_df = get_bc1_matches(kit, chemistry)
+    temp = bc_df.copy(deep=True)
+    temp = temp[['bc1_dt', 'well']].rename({'bc1_dt': 'bc1_sequence', 'well': 'bc1_well'}, axis=1)
+    adata_raw.obs = adata_raw.obs.merge(temp, how='left', on='bc1_sequence')
+
+    # merge in bc2 and bc3 information
+    for bc in [2, 3]:
+        bc_name = f'bc{bc}'
+        seq_col = f'bc{bc}_sequence'
+        well_col = f'bc{bc}_well'
+        bc_df = get_bcs(bc, kit, chemistry)
+        bc_df.rename({'well': well_col, bc_name: seq_col}, axis=1, inplace=True)
+        adata_raw.obs = adata_raw.obs.merge(bc_df, how='left', on=seq_col)
+
+    # merge in w/ sample-level metadata
+    temp = sample_df.copy(deep=True)
+    temp = temp.loc[(sample_df.plate==wc.plate)] ############
+    adata_raw.obs = adata_raw.obs.merge(temp, how='left', on='bc1_well')
+
+    # for now (to transfer info to/from the raw kallisto output)
+    adata_raw.obs_names = adata_raw.obs['bc']
+
     adata_raw_filtered = adata_raw[adata_raw.obs['bc'].isin(adata.obs['bc']), :].copy()
     adata_raw_filtered = adata_raw_filtered[adata.obs['bc'], :].copy()
 
