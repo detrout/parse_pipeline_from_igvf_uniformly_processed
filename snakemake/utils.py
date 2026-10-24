@@ -780,7 +780,7 @@ def add_meta_filter(filt_h5,
     adata.obs = adata.obs.merge(temp, how='left', on='bc1_sequence')
 
     # merge in bc2 and bc3 information
-    for bc in [2,3]:
+    for bc in [2, 3]:
         bc_name = f'bc{bc}'
         seq_col = f'bc{bc}_sequence'
         well_col = f'bc{bc}_well'
