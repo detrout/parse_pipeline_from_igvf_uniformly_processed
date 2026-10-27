@@ -654,7 +654,7 @@ def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofi
 
     make_object_columns_strings_with_default(adata)
 
-    add_cell_id(adata, drop, inplace)
+    add_cell_id(adata)
 
     inds = adata.obs.loc[adata.obs.well_type == "Multiplexed"].index
     adata = adata[inds, :].copy()
