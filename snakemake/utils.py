@@ -815,7 +815,6 @@ def assign_demux_genotype(df):
     return df
 
 
-def add_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
     """
@@ -857,6 +856,7 @@ def add_meta_filter(
         bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
         adata.obs = adata.obs.merge(bc_df, how="left", on=seq_col)
 
+def add_igvf_meta_filter(
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
     temp = temp.loc[(sample_df.plate == wc.plate)]

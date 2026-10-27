@@ -82,15 +82,16 @@ rule make_filt_adata:
     output:
         filt_adata = "pipeline_output_cellbender/{plate}/{subpool}/filtered_adata_denoised.h5ad",
     run:
-        add_meta_filter(input.filt_h5,
-                        input.unfilt_adata,
-                        input.genotype_counts,
-                        wildcards,
-                        bc_df,
-                        kit,
-                        chemistry,
-                        sample_df,
-                        output.filt_adata)
+        add_igvf_meta_filter(
+            input.filt_h5,
+            input.unfilt_adata,
+            input.genotype_counts,
+            wildcards,
+            bc_df,
+            kit,
+            chemistry,
+            sample_df,
+            output.filt_adata)
 
 ################################################################################
 ################################ Combine adatas ################################
