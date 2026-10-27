@@ -833,7 +833,8 @@ def add_igvf_meta_filter(
     3. Add raw counts as a layer
     4. Run scrublet within scanpy for each bc1_well using raw counts
     5. Create a cell ID to ensure uniqueness across subpools and experiments.
-    6. If relevant, merge in the klue results. Update Genotype and Mouse_Tissue_ID for multiplexed wells.
+    6. If relevant, merge in the klue results. Update Genotype and Mouse_Tissue_ID for
+       multiplexed wells.
     7. Clean up adata obs
     """
     ############# 1. Add barcode and sample metadata #############
@@ -846,7 +847,6 @@ def add_igvf_meta_filter(
     bc_df = get_bc1_matches(kit, chemistry)
     add_obs_barcode(adata, bc_df)
     adata.obs["subpool"] = wc.subpool
-
 
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
@@ -882,7 +882,7 @@ def add_igvf_meta_filter(
 
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
-    temp = temp.loc[(sample_df.plate == wc.plate)]  ############
+    temp = temp.loc[(sample_df.plate == wc.plate)]
     adata_raw.obs = adata_raw.obs.merge(temp, how="left", on="bc1_well")
 
     # for now (to transfer info to/from the raw kallisto output)
