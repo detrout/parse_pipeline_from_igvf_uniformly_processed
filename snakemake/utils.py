@@ -941,6 +941,97 @@ def add_founder_f1_tissue_ids(adata):
     return adata
 
 
+def save_multiplexed_processed_h5ad(adata, genotypes, ofile):
+    klue_columns = [col for col in adata.obs.columns if col.endswith("_klue_counts")]
+
+    # Define the base keys list
+    keys_base = [
+        "lab_sample_id",
+        "sample",
+        "plate",
+        "subpool",
+        "SampleType",
+        "Tissue",
+        "Sex",
+        "Age",
+        "Genotype",
+        "subpool_type",
+        "Protocol",
+        "Chemistry",
+        "bc",
+        "bc1_sequence",
+        "bc2_sequence",
+        "bc3_sequence",
+        "bc1_well",
+        "bc2_well",
+        "bc3_well",
+        "Row",
+        "Column",
+        "well_type",
+        "DOB",
+        "Age_days",
+        "Body_weight_g",
+        "Estrus_cycle",
+        "Dissection_date",
+        "Dissection_time",
+        "ZT",
+        "Dissector",
+        "Tissue_weight_mg",
+        "Mouse_Tissue_ID",
+        "Multiplexed_sample1",
+        "Multiplexed_sample2",
+    ]
+
+    # Append the '_klue_counts' columns after the base keys
+    keys = keys_base + klue_columns
+
+    # Add the remaining keys at the end
+    keys += [
+        "Notes",
+        "n_genes_by_counts_raw",
+        "total_counts_raw",
+        "total_counts_mt_raw",
+        "pct_counts_mt_raw",
+        "n_genes_by_counts_cb",
+        "total_counts_cb",
+        "total_counts_mt_cb",
+        "pct_counts_mt_cb",
+        "doublet_score",
+        "predicted_doublet",
+        "background_fraction",
+        "cell_probability",
+        "cell_size",
+        "droplet_efficiency",
+    ]
+
+    if not is_dummy(genotypes):
+        adata.obs = adata.obs[keys]
+        print(adata.obs.head())
+        print(adata.var.head())
+        print(f"Saving file {ofile}")
+        adata.write_h5ad(ofile)
+    else:
+        # for non-multiplexed experiments, remove the irrelevant multiplexed obs columns
+        keys = [
+            key
+            for key in keys
+            if key not in ["Multiplexed_sample1", "Multiplexed_sample2"]
+        ]
+
+        adata.obs.drop(
+            columns=["Multiplexed_sample1", "Multiplexed_sample2"], inplace=True
+        )
+
+        adata.obs = adata.obs[keys]
+        print(adata.obs.head())
+        print(adata.var.head())
+
+        print(f"Saving file {ofile}")
+        adata.write_h5ad(ofile)
+
+    return adata
+
+
 def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
@@ -1148,93 +1239,7 @@ def add_igvf_meta_filter(
 
     make_object_columns_strings_with_default(adata)
 
-    klue_columns = [col for col in adata.obs.columns if col.endswith("_klue_counts")]
-
-    # Define the base keys list
-    keys_base = [
-        "lab_sample_id",
-        "sample",
-        "plate",
-        "subpool",
-        "SampleType",
-        "Tissue",
-        "Sex",
-        "Age",
-        "Genotype",
-        "subpool_type",
-        "Protocol",
-        "Chemistry",
-        "bc",
-        "bc1_sequence",
-        "bc2_sequence",
-        "bc3_sequence",
-        "bc1_well",
-        "bc2_well",
-        "bc3_well",
-        "Row",
-        "Column",
-        "well_type",
-        "DOB",
-        "Age_days",
-        "Body_weight_g",
-        "Estrus_cycle",
-        "Dissection_date",
-        "Dissection_time",
-        "ZT",
-        "Dissector",
-        "Tissue_weight_mg",
-        "Mouse_Tissue_ID",
-        "Multiplexed_sample1",
-        "Multiplexed_sample2",
-    ]
-
-    # Append the '_klue_counts' columns after the base keys
-    keys = keys_base + klue_columns
-
-    # Add the remaining keys at the end
-    keys += [
-        "Notes",
-        "n_genes_by_counts_raw",
-        "total_counts_raw",
-        "total_counts_mt_raw",
-        "pct_counts_mt_raw",
-        "n_genes_by_counts_cb",
-        "total_counts_cb",
-        "total_counts_mt_cb",
-        "pct_counts_mt_cb",
-        "doublet_score",
-        "predicted_doublet",
-        "background_fraction",
-        "cell_probability",
-        "cell_size",
-        "droplet_efficiency",
-    ]
-
-    if not is_dummy(genotypes):
-        adata.obs = adata.obs[keys]
-        print(adata.obs.head())
-        print(adata.var.head())
-        print(f"Saving file {ofile}")
-        adata.write_h5ad(ofile)
-    else:
-        # for non-multiplexed experiments, remove the irrelevant multiplexed obs columns
-        keys = [
-            key
-            for key in keys
-            if key not in ["Multiplexed_sample1", "Multiplexed_sample2"]
-        ]
-
-        adata.obs.drop(
-            columns=["Multiplexed_sample1", "Multiplexed_sample2"], inplace=True
-        )
-
-        adata.obs = adata.obs[keys]
-        print(adata.obs.head())
-        print(adata.var.head())
-
-        print(f"Saving file {ofile}")
-        adata.write_h5ad(ofile)
-
+    save_multiplexed_processed_h5ad(adata, genotypes, ofile)
 
 ############################################################################################################
 ############################################## Final concat ################################################
