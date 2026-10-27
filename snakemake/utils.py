@@ -432,25 +432,7 @@ def make_adata_from_kallisto(
         "mt-"
     )  # annotate the group of mitochondrial genes as 'mt'
 
-    adata.obs["bc1_sequence"] = adata.obs["bc"].apply(get_bc1)
-    adata.obs["bc2_sequence"] = adata.obs["bc"].apply(get_bc2)
-    adata.obs["bc3_sequence"] = adata.obs["bc"].apply(get_bc3)
-
-    # merge in bc metadata
-    temp = bc_df.copy(deep=True)
-    temp = temp[["bc1_dt", "well"]].rename(
-        {"bc1_dt": "bc1_sequence", "well": "bc1_well"}, axis=1
-    )
-
-    adata.obs = adata.obs.merge(temp, how="left", on="bc1_sequence")
-
-    for bc in [2, 3]:
-        bc_name = f"bc{bc}"
-        seq_col = f"bc{bc}_sequence"
-        well_col = f"bc{bc}_well"
-        bc_df = get_bcs(bc, kit, chemistry)
-        bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
-        adata.obs = adata.obs.merge(bc_df, how="left", on=seq_col)
+    add_obs_barcode(adata, bc_df, kit, chemistry)
 
     adata.obs.index = obs["bc"]
 
@@ -815,6 +797,33 @@ def assign_demux_genotype(df):
     return df
 
 
+def add_obs_barcode(adata, bc_df, kit, chemistry):
+    """Add barcode and barcode sequence to adata
+    """
+    adata.obs["bc1_sequence"] = adata.obs["bc"].apply(get_bc1)
+    adata.obs["bc2_sequence"] = adata.obs["bc"].apply(get_bc2)
+    adata.obs["bc3_sequence"] = adata.obs["bc"].apply(get_bc3)
+
+    # merge in bc1 information
+    temp = bc_df.copy(deep=True)
+    temp = temp[["bc1_dt", "well"]].rename(
+        {"bc1_dt": "bc1_sequence", "well": "bc1_well"}, axis=1
+    )
+    adata.obs = adata.obs.merge(temp, how="left", on="bc1_sequence")
+
+    # merge in bc2 and bc3 information
+    for bc in [2, 3]:
+        bc_name = f"bc{bc}"
+        seq_col = f"bc{bc}_sequence"
+        well_col = f"bc{bc}_well"
+        bc_df = get_bcs(bc, kit, chemistry)
+        bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
+        adata.obs = adata.obs.merge(bc_df, how="left", on=seq_col)
+
+    return adata
+
+
+def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
     """
@@ -831,32 +840,14 @@ def assign_demux_genotype(df):
     print("Adding barcode and sample information...")
     adata = anndata_from_h5(filt_h5)
     adata.var["gene_id"] = adata.var.index
+    # split barcode and sample id
     adata.obs["bc"] = adata.obs.index.str.split("_").str[0]
     adata.obs.index = adata.obs["bc"]
-    adata.obs["bc1_sequence"] = adata.obs["bc"].apply(get_bc1)
-    adata.obs["bc2_sequence"] = adata.obs["bc"].apply(get_bc2)
-    adata.obs["bc3_sequence"] = adata.obs["bc"].apply(get_bc3)
-
+    bc_df = get_bc1_matches(kit, chemistry)
+    add_obs_barcode(adata, bc_df)
     adata.obs["subpool"] = wc.subpool
 
-    # merge in bc1 information
-    bc_df = get_bc1_matches(kit, chemistry)
-    temp = bc_df.copy(deep=True)
-    temp = temp[["bc1_dt", "well"]].rename(
-        {"bc1_dt": "bc1_sequence", "well": "bc1_well"}, axis=1
-    )
-    adata.obs = adata.obs.merge(temp, how="left", on="bc1_sequence")
 
-    # merge in bc2 and bc3 information
-    for bc in [2, 3]:
-        bc_name = f"bc{bc}"
-        seq_col = f"bc{bc}_sequence"
-        well_col = f"bc{bc}_well"
-        bc_df = get_bcs(bc, kit, chemistry)
-        bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
-        adata.obs = adata.obs.merge(bc_df, how="left", on=seq_col)
-
-def add_igvf_meta_filter(
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
     temp = temp.loc[(sample_df.plate == wc.plate)]
@@ -886,26 +877,8 @@ def add_igvf_meta_filter(
     adata_raw.obs["bc"] = adata_raw.obs.index.str.split("_").str[0]
     adata_raw.obs.index = adata_raw.obs["bc"]
 
-    adata_raw.obs["bc1_sequence"] = adata_raw.obs["bc"].apply(get_bc1)
-    adata_raw.obs["bc2_sequence"] = adata_raw.obs["bc"].apply(get_bc2)
-    adata_raw.obs["bc3_sequence"] = adata_raw.obs["bc"].apply(get_bc3)
-
-    # merge in bc1 information
     bc_df = get_bc1_matches(kit, chemistry)
-    temp = bc_df.copy(deep=True)
-    temp = temp[["bc1_dt", "well"]].rename(
-        {"bc1_dt": "bc1_sequence", "well": "bc1_well"}, axis=1
-    )
-    adata_raw.obs = adata_raw.obs.merge(temp, how="left", on="bc1_sequence")
-
-    # merge in bc2 and bc3 information
-    for bc in [2, 3]:
-        bc_name = f"bc{bc}"
-        seq_col = f"bc{bc}_sequence"
-        well_col = f"bc{bc}_well"
-        bc_df = get_bcs(bc, kit, chemistry)
-        bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
-        adata_raw.obs = adata_raw.obs.merge(bc_df, how="left", on=seq_col)
+    add_obs_barcode(adata_raw, bc_df, kit, chemistry)
 
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
