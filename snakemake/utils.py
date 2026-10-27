@@ -823,6 +823,52 @@ def add_obs_barcode(adata, bc_df, kit, chemistry):
     return adata
 
 
+def run_scrublet(adata, n_prin_comps):
+    ############# 4. Run scrublet within scanpy for each bc1_well #############
+    # https://scanpy.readthedocs.io/en/stable/api/generated/scanpy.pp.scrublet.html
+    # using raw counts
+    print("Running scrublet...")
+
+    valid_cells = adata.obs[adata.obs["total_counts"] >= 200]
+    well_counts = valid_cells["bc1_well"].value_counts()
+
+    # Initialize the doublet score and prediction with default values
+    # (0.0 for score, False for doublet)
+    adata.obs["doublet_score"] = 0.0  # Ensure this is float
+    adata.obs["predicted_doublet"] = False
+
+    # Iterate through each well in the dataset
+    for well in adata.obs["bc1_well"].unique():
+        if (
+            well_counts.get(well, 0) >= 50
+        ):  # Run scrublet if ≥ 50 cells have total_counts ≥ 100 in that well
+            # Select cells in this well and convert to an actual object (copy)
+            subset = adata[
+                adata.obs["bc1_well"] == well
+            ].copy()
+
+            # Run scrublet on the cells in this well
+            sc.pp.scrublet(subset, n_prin_comps=30)
+
+            # Update doublet score and prediction, casting to correct types
+            adata.obs.loc[
+                adata.obs["bc1_well"] == well, "doublet_score"
+            ] = subset.obs["doublet_score"].astype(float)
+            adata.obs.loc[
+                adata.obs["bc1_well"] == well, "predicted_doublet"
+            ] = subset.obs["predicted_doublet"].astype(bool)
+        else:
+            # If fewer than 50 cells, values remain initialized (0.0 and False)
+            adata.obs.loc[
+                adata.obs["bc1_well"] == well, "doublet_score"
+            ] = 0.0
+            adata.obs.loc[
+                adata.obs["bc1_well"] == well, "predicted_doublet"
+            ] = False
+
+    return subset
+
+
 def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
@@ -893,46 +939,7 @@ def add_igvf_meta_filter(
 
     adata.layers["raw_counts"] = adata_raw_filtered.X.copy()
 
-    ############# 4. Run scrublet within scanpy for each bc1_well #############
-    # https://scanpy.readthedocs.io/en/stable/api/generated/scanpy.pp.scrublet.html
-    # using raw counts
-    print("Running scrublet...")
-
-    valid_cells = adata_raw_filtered.obs[adata_raw_filtered.obs["total_counts"] >= 200]
-    well_counts = valid_cells["bc1_well"].value_counts()
-
-    # Initialize the doublet score and prediction with default values (0.0 for score, False for doublet)
-    adata_raw_filtered.obs["doublet_score"] = 0.0  # Ensure this is float
-    adata_raw_filtered.obs["predicted_doublet"] = False
-
-    # Iterate through each well in the dataset
-    for well in adata_raw_filtered.obs["bc1_well"].unique():
-        if (
-            well_counts.get(well, 0) >= 50
-        ):  # Run scrublet if ≥ 50 cells have total_counts ≥ 100 in that well
-            # Select cells in this well and convert to an actual object (copy)
-            subset = adata_raw_filtered[
-                adata_raw_filtered.obs["bc1_well"] == well
-            ].copy()
-
-            # Run scrublet on the cells in this well
-            sc.pp.scrublet(subset, n_prin_comps=30)
-
-            # Update doublet score and prediction, casting to correct types
-            adata_raw_filtered.obs.loc[
-                adata_raw_filtered.obs["bc1_well"] == well, "doublet_score"
-            ] = subset.obs["doublet_score"].astype(float)
-            adata_raw_filtered.obs.loc[
-                adata_raw_filtered.obs["bc1_well"] == well, "predicted_doublet"
-            ] = subset.obs["predicted_doublet"].astype(bool)
-        else:
-            # If fewer than 50 cells, values remain initialized (0.0 and False)
-            adata_raw_filtered.obs.loc[
-                adata_raw_filtered.obs["bc1_well"] == well, "doublet_score"
-            ] = 0.0
-            adata_raw_filtered.obs.loc[
-                adata_raw_filtered.obs["bc1_well"] == well, "predicted_doublet"
-            ] = False
+    run_scrublet(adata_raw_filtered, n_prin_comps)
 
     # Copy the results back to the original adata object
     adata.obs["doublet_score"] = adata_raw_filtered.obs["doublet_score"]
