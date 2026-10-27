@@ -437,9 +437,7 @@ def make_adata_from_kallisto(
     adata.obs.index = obs["bc"]
 
     ################## extra stuff for report ##################
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
+    add_scanpy_qc_metrics_for_layer(adata)
 
     ### knee plot df
     knee = np.sort((np.array(adata.X.sum(axis=1))).flatten())[::-1]
@@ -877,6 +875,30 @@ def run_scrublet(adata, n_prin_comps):
     return subset
 
 
+def add_scanpy_qc_metrics_for_layer(adata, layer=None, layer_code=None):
+    sc.pp.calculate_qc_metrics(
+        adata,
+        qc_vars=["mt"],
+        layer=layer,
+        percent_top=None,
+        log1p=False,
+        inplace=True,
+    )
+    if layer_code is not None:
+        suffix = "_{}".format(layer_code)
+        adata.obs.rename(
+            columns={
+                "n_genes_by_counts": "n_genes_by_counts{}".format(suffix),
+                "total_counts": "total_counts{}".format(suffix),
+                "total_counts_mt": "total_counts_mt{}".format(suffix),
+                "pct_counts_mt": "pct_counts_mt{}".format(suffix),
+            },
+            inplace=True,
+        )
+
+    return adata
+
+
 def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
@@ -961,41 +983,8 @@ def add_igvf_meta_filter(
         "mt-"
     )  # annotate the group of mitochondrial genes as 'mt'
 
-    sc.pp.calculate_qc_metrics(
-        adata,
-        qc_vars=["mt"],
-        layer="raw_counts",
-        percent_top=None,
-        log1p=False,
-        inplace=True,
-    )
-    adata.obs.rename(
-        columns={
-            "n_genes_by_counts": "n_genes_by_counts_raw",
-            "total_counts": "total_counts_raw",
-            "total_counts_mt": "total_counts_mt_raw",
-            "pct_counts_mt": "pct_counts_mt_raw",
-        },
-        inplace=True,
-    )
-
-    sc.pp.calculate_qc_metrics(
-        adata,
-        qc_vars=["mt"],
-        layer="cellbender_counts",
-        percent_top=None,
-        log1p=False,
-        inplace=True,
-    )
-    adata.obs.rename(
-        columns={
-            "n_genes_by_counts": "n_genes_by_counts_cb",
-            "total_counts": "total_counts_cb",
-            "total_counts_mt": "total_counts_mt_cb",
-            "pct_counts_mt": "pct_counts_mt_cb",
-        },
-        inplace=True,
-    )
+    add_scanpy_qc_metrics_for_layer(adata, "raw_counts", "raw")
+    add_scanpy_qc_metrics_for_layer(adata, "cellbender_counts", "cb")
 
     ############# 6. Merge in the klue results #############
     # assign genotype for multiplexed wells
