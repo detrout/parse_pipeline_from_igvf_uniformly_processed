@@ -899,6 +899,60 @@ def add_scanpy_qc_metrics_for_layer(adata, layer=None, layer_code=None):
     return adata
 
 
+def add_founder_f1_tissue_ids(adata):
+    """Add genotype for genetically multiplexed samples
+    """
+    inds = adata.obs.loc[adata.obs.well_type == "Multiplexed"].index
+    adata.obs.Genotype = adata.obs.Genotype.astype("str")
+    adata.obs.loc[inds, "Genotype"] = adata.obs.loc[inds, "new_genotype"]
+    adata.obs.drop("new_genotype", axis=1, inplace=True)
+
+    genotype_list_founders = [
+        "AJ",
+        "WSBJ",
+        "129S1J",
+        "NODJ",
+        "PWKJ",
+        "NZOJ",
+        "CASTJ",
+    ]
+    genotype_list_f1s = [
+        "B6AF1J",
+        "B6129S1F1J",
+        "B6NZOF1J",
+        "B6WSBF1J",
+        "B6NODF1J",
+        "B6PWKF1J",
+        "B6CASTF1J",
+    ]
+
+    if any(
+        genotype in adata.obs["Genotype"].values
+        for genotype in genotype_list_founders
+    ):
+        ms1 = ["B6J", "AJ", "WSBJ", "129S1J"]
+        ms2 = ["NODJ", "PWKJ", "NZOJ", "CASTJ"]
+    elif any(
+        genotype in adata.obs["Genotype"].values for genotype in genotype_list_f1s
+    ):
+        ms1 = ["B6J", "B6AF1J", "B6WSBF1J", "B6129S1F1J"]
+        ms2 = ["B6NODF1J", "B6PWKF1J", "B6NZOF1J", "B6CASTF1J"]
+
+    def update_mouse_tissue_id(row):
+        if row["well_type"] == "Multiplexed" and row["Genotype"] != "tie":
+            if row["Genotype"] in ms1:
+                return row["Multiplexed_sample1"]
+            elif row["Genotype"] in ms2:
+                return row["Multiplexed_sample2"]
+        return row["Mouse_Tissue_ID"]
+
+    obs = adata.obs
+    obs["Mouse_Tissue_ID"] = obs.apply(update_mouse_tissue_id, axis=1)
+    adata.obs["Mouse_Tissue_ID"] = obs["Mouse_Tissue_ID"]
+
+    return adata
+
+
 def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
@@ -1021,54 +1075,8 @@ def add_igvf_meta_filter(
             if col in adata.obs.columns:
                 adata.obs.rename(columns={col: col + "_klue_counts"}, inplace=True)
 
-        inds = adata.obs.loc[adata.obs.well_type == "Multiplexed"].index
-        adata.obs.Genotype = adata.obs.Genotype.astype("str")
-        adata.obs.loc[inds, "Genotype"] = adata.obs.loc[inds, "new_genotype"]
-        adata.obs.drop("new_genotype", axis=1, inplace=True)
-
-        genotype_list_founders = [
-            "AJ",
-            "WSBJ",
-            "129S1J",
-            "NODJ",
-            "PWKJ",
-            "NZOJ",
-            "CASTJ",
-        ]
-        genotype_list_f1s = [
-            "B6AF1J",
-            "B6129S1F1J",
-            "B6NZOF1J",
-            "B6WSBF1J",
-            "B6NODF1J",
-            "B6PWKF1J",
-            "B6CASTF1J",
-        ]
-
-        if any(
-            genotype in adata.obs["Genotype"].values
-            for genotype in genotype_list_founders
-        ):
-            ms1 = ["B6J", "AJ", "WSBJ", "129S1J"]
-            ms2 = ["NODJ", "PWKJ", "NZOJ", "CASTJ"]
-        elif any(
-            genotype in adata.obs["Genotype"].values for genotype in genotype_list_f1s
-        ):
-            ms1 = ["B6J", "B6AF1J", "B6WSBF1J", "B6129S1F1J"]
-            ms2 = ["B6NODF1J", "B6PWKF1J", "B6NZOF1J", "B6CASTF1J"]
-
-        def update_mouse_tissue_id(row):
-            if row["well_type"] == "Multiplexed" and row["Genotype"] != "tie":
-                if row["Genotype"] in ms1:
-                    return row["Multiplexed_sample1"]
-                elif row["Genotype"] in ms2:
-                    return row["Multiplexed_sample2"]
-            return row["Mouse_Tissue_ID"]
-
-        obs = adata.obs
-        obs["Mouse_Tissue_ID"] = obs.apply(update_mouse_tissue_id, axis=1)
-        adata.obs["Mouse_Tissue_ID"] = obs["Mouse_Tissue_ID"]
-
+        add_founder_f1_tissue_ids()
+        
         # Update other sample-specific metadata columns
         multiplexed_obs = adata.obs[
             (adata.obs["well_type"] == "Multiplexed") & (adata.obs["Genotype"] != "tie")
