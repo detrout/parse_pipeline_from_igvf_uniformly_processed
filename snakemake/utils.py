@@ -591,6 +591,30 @@ def rename_klue_genotype_cols(adata):
     return adata
 
 
+def add_cell_id(adata):
+    """Generate well, subpool, plate based cell id
+    """
+    # create new index for each cell
+    adata.obs["cellID"] = (
+        adata.obs["bc1_well"]
+        + "_"
+        + adata.obs["bc2_well"]
+        + "_"
+        + adata.obs["bc3_well"]
+        + "_"
+        + adata.obs["subpool"]
+        + "_"
+        + adata.obs["plate"]
+    )
+    adata.obs.reset_index(drop=True)
+
+    # make sure these are unique + set as index
+    assert len(adata.obs.index) == len(adata.obs.cellID.unique().tolist())
+    adata.obs.set_index("cellID", inplace=True)
+
+    return adata
+
+
 def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofile):
     """
     Add gene names to the klue output.
@@ -644,23 +668,7 @@ def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofi
         if pd.api.types.is_object_dtype(adata.obs[c].dtype):
             adata.obs[c] = adata.obs[c].fillna("NA")
 
-    # create new index for each cell
-    adata.obs["cellID"] = (
-        adata.obs["bc1_well"]
-        + "_"
-        + adata.obs["bc2_well"]
-        + "_"
-        + adata.obs["bc3_well"]
-        + "_"
-        + adata.obs["subpool"]
-        + "_"
-        + adata.obs["plate"]
-    )
-    adata.obs.reset_index(drop=True)
-
-    # make sure these are unique + set as index
-    assert len(adata.obs.index) == len(adata.obs.cellID.unique().tolist())
-    adata.obs.set_index("cellID", inplace=True)
+    add_cell_id(adata, drop, inplace)
 
     inds = adata.obs.loc[adata.obs.well_type == "Multiplexed"].index
     adata = adata[inds, :].copy()
@@ -945,23 +953,7 @@ def add_igvf_meta_filter(
     adata.obs["doublet_score"] = adata_raw_filtered.obs["doublet_score"]
     adata.obs["predicted_doublet"] = adata_raw_filtered.obs["predicted_doublet"]
 
-    ############# 5. Create new cell IDs #############
-    adata.obs["cellID"] = (
-        adata.obs["bc1_well"]
-        + "_"
-        + adata.obs["bc2_well"]
-        + "_"
-        + adata.obs["bc3_well"]
-        + "_"
-        + adata.obs["subpool"]
-        + "_"
-        + adata.obs["plate"]
-    )
-    adata.obs.reset_index(drop=True)
-
-    # make sure these are unique + set as index
-    assert len(adata.obs.index) == len(adata.obs.cellID.unique().tolist())
-    adata.obs.set_index("cellID", inplace=True)
+    add_cell_id(adata)
 
     # Add QC metrics from scanpy
     adata.var_names = adata.var["gene_name"]
