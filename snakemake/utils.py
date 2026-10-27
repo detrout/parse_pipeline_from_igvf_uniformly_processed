@@ -613,6 +613,15 @@ def add_cell_id(adata):
     return adata
 
 
+def make_object_columns_strings_with_default(adata):
+    # make all object columns string columns
+    for c in adata.obs.columns:
+        if pd.api.types.is_object_dtype(adata.obs[c].dtype):
+            adata.obs[c] = adata.obs[c].fillna("NA")
+
+    return adata
+
+
 def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofile):
     """
     Add gene names to the klue output.
@@ -661,10 +670,7 @@ def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofi
     print(adata.var)
     print(adata.obs)
 
-    # make all object columns string columns
-    for c in adata.obs.columns:
-        if pd.api.types.is_object_dtype(adata.obs[c].dtype):
-            adata.obs[c] = adata.obs[c].fillna("NA")
+    make_object_columns_strings_with_default(adata)
 
     add_cell_id(adata, drop, inplace)
 
@@ -1076,7 +1082,7 @@ def add_igvf_meta_filter(
                 adata.obs.rename(columns={col: col + "_klue_counts"}, inplace=True)
 
         add_founder_f1_tissue_ids()
-        
+
         # Update other sample-specific metadata columns
         multiplexed_obs = adata.obs[
             (adata.obs["well_type"] == "Multiplexed") & (adata.obs["Genotype"] != "tie")
@@ -1158,10 +1164,7 @@ def add_igvf_meta_filter(
     else:
         adata.obs["sample"] = "NA"
 
-    # make all object columns string columns
-    for c in adata.obs.columns:
-        if pd.api.types.is_object_dtype(adata.obs[c].dtype):
-            adata.obs[c] = adata.obs[c].fillna("NA")
+    make_object_columns_strings_with_default(adata)
 
     klue_columns = [col for col in adata.obs.columns if col.endswith("_klue_counts")]
 
