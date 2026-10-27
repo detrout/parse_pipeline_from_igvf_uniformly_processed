@@ -1136,7 +1136,8 @@ def add_igvf_meta_filter(
             == 0
         )
 
-        # merge in first; this way we have access to the genotypes that should be in each well
+        # merge in first; this way we have access to the genotypes that should be in
+        # each well
         adata.obs = adata.obs.merge(
             klue_counts_df, how="left", left_index=True, right_index=True
         )
@@ -1146,7 +1147,8 @@ def add_igvf_meta_filter(
         df = assign_demux_genotype(df)
 
         print("Updating genotype for multiplexed wells...")
-        # merge in w/ adata and replace old values in "Genotype" column for multiplexed wells with the klue results
+        # merge in w/ adata and replace old values in "Genotype" column for multiplexed
+        # wells with the klue results
         adata.obs = adata.obs.merge(df, how="left", left_index=True, right_index=True)
 
         # append "_klue_counts" to the genotype counts columns for clarity
