@@ -640,27 +640,9 @@ def add_meta_klue(mtx, cgb, cggn, cgg, wc, bc_df, kit, chemistry, sample_df, ofi
     adata = anndata.AnnData(X=X, obs=obs, var=var)
     adata.obs.index = obs["bc"]
 
-    adata.obs["bc1_sequence"] = adata.obs["bc"].apply(get_bc1)
-    adata.obs["bc2_sequence"] = adata.obs["bc"].apply(get_bc2)
-    adata.obs["bc3_sequence"] = adata.obs["bc"].apply(get_bc3)
+    add_obs_barcode(adata, bc_df, kit, chemistry)
 
     adata.obs["subpool"] = wc.subpool
-
-    # merge in bc metadata
-    temp = bc_df.copy(deep=True)
-    temp = temp[["bc1_dt", "well"]].rename(
-        {"bc1_dt": "bc1_sequence", "well": "bc1_well"}, axis=1
-    )
-    adata.obs = adata.obs.merge(temp, how="left", on="bc1_sequence")
-
-    # merge in other bc information
-    for bc in [2, 3]:
-        bc_name = f"bc{bc}"
-        seq_col = f"bc{bc}_sequence"
-        well_col = f"bc{bc}_well"
-        bc_df = get_bcs(bc, kit, chemistry)
-        bc_df.rename({"well": well_col, bc_name: seq_col}, axis=1, inplace=True)
-        adata.obs = adata.obs.merge(bc_df, how="left", on=seq_col)
 
     # merge in w/ sample-level metadata
     temp = sample_df.copy(deep=True)
