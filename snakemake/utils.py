@@ -1414,8 +1414,7 @@ def get_tissue_adatas(df, sample_df, wc, cfg_entry):
 def concat_large_adatas(adatas, ofile):
     obs_list = []
     X_list = []
-    raw_list = []
-    cb_list = []
+    layers = {}
     var = None
 
     for i, f in enumerate(adatas):
@@ -1424,19 +1423,15 @@ def concat_large_adatas(adatas, ofile):
 
         # Stream and convert to sparse if needed
         X = temp.X[:]
-        raw = temp.layers["raw_counts"][:]
-        cb = temp.layers["cellbender_counts"][:]
-
         if not sp.issparse(X):
             X = sp.csr_matrix(X)
-        if not sp.issparse(raw):
-            raw = sp.csr_matrix(raw)
-        if not sp.issparse(cb):
-            cb = sp.csr_matrix(cb)
-
         X_list.append(X)
-        raw_list.append(raw)
-        cb_list.append(cb)
+
+        for layer_name in temp.layers:
+            temp_layer = temp.layers[layer_name][:]
+            if not sp.issparse(temp_layer):
+                temp_layer = sp.csr_matrix(temp_layer)
+            layers.setdefault(layer_name, []).append(temp_layer)
 
         # Stream obs and fix index
         obs = temp.obs.copy()
@@ -1451,14 +1446,15 @@ def concat_large_adatas(adatas, ofile):
 
     print("Concatenating all layers and obs...")
     X_all = sp.vstack(X_list)
-    raw_all = sp.vstack(raw_list)
-    cb_all = sp.vstack(cb_list)
     obs_all = pd.concat(obs_list)
 
     print("Building final AnnData object...")
     adata = anndata.AnnData(X=X_all, obs=obs_all, var=var)
-    adata.layers["raw_counts"] = raw_all
-    adata.layers["cellbender_counts"] = cb_all
+    for layer_name in layers:
+        temp_all = sp.vstack(layers[layer_name])
+        adata.layers[layer_name] = temp_all
+        # free up a bit of ram
+        layers[layer_name] = []
 
     print(f"Writing to {ofile}...")
     adata.write(ofile)
