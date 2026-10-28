@@ -1184,7 +1184,7 @@ def add_igvf_meta_filter(
 
     adata.layers["raw_counts"] = adata_raw_filtered.X.copy()
 
-    run_scrublet(adata_raw_filtered, n_prin_comps)
+    run_scrublet(adata_raw_filtered, n_prin_comps=30)
 
     # Copy the results back to the original adata object
     adata.obs["doublet_score"] = adata_raw_filtered.obs["doublet_score"]
