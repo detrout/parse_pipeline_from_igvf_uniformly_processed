@@ -64,6 +64,8 @@ include: "rules/cellbender.yml"
 ##################### Merge klue results with cellbender adata and run scrublet #####################
 #####################################################################################################
 
+include: "rules/klue.smk"
+
 rule make_filt_adata:
     threads: 4
     resources:
