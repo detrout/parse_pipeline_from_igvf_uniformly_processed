@@ -7,7 +7,6 @@ import anndata
 import scanpy as sc
 import os
 import json
-from cellbender.remove_background.downstream import anndata_from_h5
 from sklearn.mixture import GaussianMixture
 
 
@@ -1128,6 +1127,9 @@ def add_igvf_meta_filter(
        multiplexed wells.
     7. Clean up adata obs
     """
+    # Only require cellbender package if we're using cellbender for results
+    from cellbender.remove_background.downstream import anndata_from_h5
+
     ############# 1. Add barcode and sample metadata #############
     print("Adding barcode and sample information...")
     adata = anndata_from_h5(filt_h5)
