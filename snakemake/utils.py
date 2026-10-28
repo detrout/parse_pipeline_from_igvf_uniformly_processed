@@ -1138,7 +1138,7 @@ def add_igvf_meta_filter(
     adata.obs["bc"] = adata.obs.index.str.split("_").str[0]
     adata.obs.index = adata.obs["bc"]
     bc_df = get_bc1_matches(kit, chemistry)
-    add_obs_barcode(adata, bc_df)
+    add_obs_barcode(adata, bc_df, kit, chemistry)
     adata.obs["subpool"] = wc.subpool
 
     # merge in w/ sample-level metadata
