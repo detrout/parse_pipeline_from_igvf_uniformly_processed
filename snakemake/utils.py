@@ -1252,6 +1252,106 @@ def add_igvf_meta_filter(
 
     save_multiplexed_processed_h5ad(adata, genotypes, ofile)
 
+
+def add_igvf_meta_raw(
+    unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
+):
+    """
+    Format cellbender output adata:
+    1. Add barcode and sample metadata
+    2. Add cellbender counts as a layer
+    3. Add raw counts as a layer
+    4. Run scrublet within scanpy for each bc1_well using raw counts
+    5. Create a cell ID to ensure uniqueness across subpools and experiments.
+    6. If relevant, merge in the klue results. Update Genotype and Mouse_Tissue_ID for
+       multiplexed wells.
+    7. Clean up adata obs
+    """
+    ############# 1. Add barcode and sample metadata #############
+    print("Adding barcode and sample information...")
+    adata = sc.read_h5ad(unfilt_adata)
+    adata.var["gene_id"] = adata.var.index
+    # split barcode and sample id
+    adata.obs["bc"] = adata.obs.index.str.split("_").str[0]
+    adata.obs.index = adata.obs["bc"]
+    bc_df = get_bc1_matches(kit, chemistry)
+    add_obs_barcode(adata, bc_df, kit, chemistry)
+    adata.obs["subpool"] = wc.subpool
+
+    # merge in w/ sample-level metadata
+    temp = sample_df.copy(deep=True)
+    temp = temp.loc[(sample_df.plate == wc.plate)]
+    adata.obs = adata.obs.merge(temp, how="left", on="bc1_well")
+
+    # for now (to transfer info to/from the raw kallisto output)
+    adata.obs_names = adata.obs["bc"]
+
+    # store gene names as a column in var
+    adata.var["gene_name"] = adata.var_names
+
+    # set gene ID as var names for further processing (avoid gene name duplication issues)
+    adata.var_names = adata.var["gene_id"]
+
+    # Add QC metrics from scanpy
+    adata.var_names = adata.var["gene_name"]
+    adata.var["mt"] = adata.var_names.str.startswith(
+        "mt-"
+    )  # annotate the group of mitochondrial genes as 'mt'
+
+    add_scanpy_qc_metrics_for_layer(adata)
+
+    run_scrublet(adata, n_prin_comps=30)
+
+    add_cell_id(adata)
+
+    ############# 6. Merge in the klue results #############
+    # assign genotype for multiplexed wells
+    adata = merge_metadata_by_klue_scores(adata, genotypes, sample_df)
+
+    ############# 7. Clean up obs #############
+    adata.obs["lab_sample_id"] = adata.obs["Mouse_Tissue_ID"]
+
+    adata.obs.drop(
+        columns=["mult_genotype_1", "mult_genotype_2", "mult_genotype"], inplace=True
+    )
+
+    if wc.plate == "igvf_b01":
+        adata.obs["subpool_type"] = np.where(
+            adata.obs["subpool"].isin(["Subpool_7", "Subpool_EX"]), "EX", "NO"
+        )
+    else:
+        adata.obs["subpool_type"] = np.where(
+            adata.obs["subpool"] == "Subpool_EX", "EX", "NO"
+        )
+
+    # add accessions if the file exists
+    file_path = f"configs/{wc.plate.upper()}_barcode_sample_map.tsv"
+    if os.path.exists(file_path):
+        acc_map = pd.read_csv(file_path, sep="\t")
+        acc_map = acc_map[acc_map["parse_barcode_type"] == "T"]
+
+        acc_map = acc_map.drop(
+            columns=["barcode", "seqspec_region_id", "parse_barcode_type"]
+        )
+        adata_obs_df = adata.obs.reset_index()
+        merged_df = adata_obs_df.merge(
+            acc_map, left_on="bc1_well", right_on="well", how="left"
+        )
+        merged_df.set_index("cellID", inplace=True)
+
+        # Handle potential multiple values in 'sample' per well by collapsing them, comma-separated
+        merged_df["sample"] = merged_df.groupby("cellID")["sample"].transform(
+            lambda x: ",".join(x.dropna().unique())
+        )
+
+        adata.obs["sample"] = merged_df["sample"]
+    else:
+        adata.obs["sample"] = "NA"
+
+    make_object_columns_strings_with_default(adata)
+
+    save_multiplexed_processed_h5ad(adata, genotypes, ofile)
+
 ############################################################################################################
 ############################################## Final concat ################################################
 ############################################################################################################
