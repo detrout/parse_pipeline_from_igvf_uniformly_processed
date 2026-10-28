@@ -5,13 +5,9 @@ import scipy.sparse as sp
 from snakemake.io import expand
 import anndata
 import scanpy as sc
-import shutil
 import os
 import json
 from cellbender.remove_background.downstream import anndata_from_h5
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.mixture import GaussianMixture
 
 
