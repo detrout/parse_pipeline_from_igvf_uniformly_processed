@@ -19,5 +19,6 @@ dependencies:
   - snakemake
   - scanpy
   - scipy
+  - scikit-image
   - scikit-learn
   - tqdm
