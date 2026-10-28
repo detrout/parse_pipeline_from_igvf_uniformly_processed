@@ -1032,6 +1032,92 @@ def save_multiplexed_processed_h5ad(adata, genotypes, ofile):
     return adata
 
 
+def update_multiplexed_sample_metadata(adata, sample_df):
+    # Update other sample-specific metadata columns
+    multiplexed_obs = adata.obs[
+        (adata.obs["well_type"] == "Multiplexed") & (adata.obs["Genotype"] != "tie")
+    ]
+
+    sample_df_unique = sample_df.drop_duplicates(
+        subset=[
+            "Mouse_Tissue_ID",
+            "Tissue_weight_mg",
+            "ZT",
+            "Dissection_time",
+            "Dissection_date",
+            "Estrus_cycle",
+            "Body_weight_g",
+            "Age_days",
+            "DOB",
+        ]
+    )
+
+    merged = multiplexed_obs[["Mouse_Tissue_ID"]].merge(
+        sample_df_unique[
+            [
+                "Mouse_Tissue_ID",
+                "Tissue_weight_mg",
+                "ZT",
+                "Dissection_time",
+                "Dissection_date",
+                "Estrus_cycle",
+                "Body_weight_g",
+                "Age_days",
+                "DOB",
+            ]
+        ],
+        on="Mouse_Tissue_ID",
+        how="left",
+    )
+
+    merged.set_index(multiplexed_obs.index)
+    adata.obs.update(merged.set_index(multiplexed_obs.index))
+    return adata
+
+
+def merge_metadata_by_klue_scores(adata, genotypes, sample_df):
+    if not is_dummy(genotypes):
+        # filter out sample swaps with wrong multiplexed genotype
+        adata = adata[
+            ~adata.obs["Genotype"].isin(["WSBJ/CASTJ", "AJ/129S1J", "PWKJ/CASTJ"])
+        ].copy()
+
+        klue_counts_df = pd.read_csv(genotypes, sep="\t")
+        klue_counts_df.set_index("cellID", inplace=True)
+
+        # make sure we won't dupe any cols
+        assert (
+            len(set(klue_counts_df.columns.tolist()) & set(adata.obs.columns.tolist()))
+            == 0
+        )
+
+        # merge in first; this way we have access to the genotypes that should be in
+        # each well
+        adata.obs = adata.obs.merge(
+            klue_counts_df, how="left", left_index=True, right_index=True
+        )
+
+        # assign genotype for multiplexed wells
+        df = adata.obs.copy(deep=True)
+        df = assign_demux_genotype(df)
+
+        print("Updating genotype for multiplexed wells...")
+        # merge in w/ adata and replace old values in "Genotype" column for multiplexed
+        # wells with the klue results
+        adata.obs = adata.obs.merge(df, how="left", left_index=True, right_index=True)
+
+        # append "_klue_counts" to the genotype counts columns for clarity
+        for col in klue_counts_df.columns:
+            if col in adata.obs.columns:
+                adata.obs.rename(columns={col: col + "_klue_counts"}, inplace=True)
+
+        add_founder_f1_tissue_ids()
+
+        update_multiplexed_sample_metadata(adata, sample_df)
+
+    return adata
+
+
 def add_igvf_meta_filter(
     filt_h5, unfilt_adata, genotypes, wc, bc_df, kit, chemistry, sample_df, ofile
 ):
@@ -1121,82 +1207,7 @@ def add_igvf_meta_filter(
 
     ############# 6. Merge in the klue results #############
     # assign genotype for multiplexed wells
-    if not is_dummy(genotypes):
-        # filter out sample swaps with wrong multiplexed genotype
-        adata = adata[
-            ~adata.obs["Genotype"].isin(["WSBJ/CASTJ", "AJ/129S1J", "PWKJ/CASTJ"])
-        ].copy()
-
-        klue_counts_df = pd.read_csv(genotypes, sep="\t")
-        klue_counts_df.set_index("cellID", inplace=True)
-
-        # make sure we won't dupe any cols
-        assert (
-            len(set(klue_counts_df.columns.tolist()) & set(adata.obs.columns.tolist()))
-            == 0
-        )
-
-        # merge in first; this way we have access to the genotypes that should be in
-        # each well
-        adata.obs = adata.obs.merge(
-            klue_counts_df, how="left", left_index=True, right_index=True
-        )
-
-        # assign genotype for multiplexed wells
-        df = adata.obs.copy(deep=True)
-        df = assign_demux_genotype(df)
-
-        print("Updating genotype for multiplexed wells...")
-        # merge in w/ adata and replace old values in "Genotype" column for multiplexed
-        # wells with the klue results
-        adata.obs = adata.obs.merge(df, how="left", left_index=True, right_index=True)
-
-        # append "_klue_counts" to the genotype counts columns for clarity
-        for col in klue_counts_df.columns:
-            if col in adata.obs.columns:
-                adata.obs.rename(columns={col: col + "_klue_counts"}, inplace=True)
-
-        add_founder_f1_tissue_ids()
-
-        # Update other sample-specific metadata columns
-        multiplexed_obs = adata.obs[
-            (adata.obs["well_type"] == "Multiplexed") & (adata.obs["Genotype"] != "tie")
-        ]
-
-        sample_df_unique = sample_df.drop_duplicates(
-            subset=[
-                "Mouse_Tissue_ID",
-                "Tissue_weight_mg",
-                "ZT",
-                "Dissection_time",
-                "Dissection_date",
-                "Estrus_cycle",
-                "Body_weight_g",
-                "Age_days",
-                "DOB",
-            ]
-        )
-
-        merged = multiplexed_obs[["Mouse_Tissue_ID"]].merge(
-            sample_df_unique[
-                [
-                    "Mouse_Tissue_ID",
-                    "Tissue_weight_mg",
-                    "ZT",
-                    "Dissection_time",
-                    "Dissection_date",
-                    "Estrus_cycle",
-                    "Body_weight_g",
-                    "Age_days",
-                    "DOB",
-                ]
-            ],
-            on="Mouse_Tissue_ID",
-            how="left",
-        )
-
-        merged.set_index(multiplexed_obs.index)
-        adata.obs.update(merged.set_index(multiplexed_obs.index))
+    adata = merge_metadata_by_klue_scores(adata, genotypes, sample_df)
 
     ############# 7. Clean up obs #############
     adata.obs["lab_sample_id"] = adata.obs["Mouse_Tissue_ID"]
