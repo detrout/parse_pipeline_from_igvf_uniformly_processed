@@ -2,8 +2,7 @@ import pandas as pd
 
 from utils import *
 
-include:
-    rules/config.smk
+include: "rules/config.smk"
 
 rule all:
     input:
@@ -22,8 +21,7 @@ rule all:
 #               plate=df.plate.tolist(),
 #               subpool=df.subpool.tolist())
 
-include:
-    rules/download.smk
+include: "rules/download.smk"
     
 
 
@@ -60,8 +58,7 @@ rule link_existing_unfilt_adata:
         """
 
 
-include:
-    rules/cellbender.yml
+include: "rules/cellbender.yml"
 
 #####################################################################################################
 ##################### Merge klue results with cellbender adata and run scrublet #####################
