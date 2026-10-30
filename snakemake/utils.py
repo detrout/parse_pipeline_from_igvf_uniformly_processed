@@ -937,10 +937,9 @@ def add_founder_f1_tissue_ids(adata):
 
 
 def save_multiplexed_processed_h5ad(adata, genotypes, ofile):
-    klue_columns = [col for col in adata.obs.columns if col.endswith("_klue_counts")]
 
     # Define the base keys list
-    keys_base = [
+    order_by = [
         "lab_sample_id",
         "sample",
         "plate",
@@ -978,26 +977,32 @@ def save_multiplexed_processed_h5ad(adata, genotypes, ofile):
     ]
 
     # Append the '_klue_counts' columns after the base keys
-    keys = keys_base + klue_columns
+    order_by.extend([col for col in adata.obs.columns if col.endswith("_klue_counts")])
+    order_by.append("Notes")
 
     # Add the remaining keys at the end
-    keys += [
-        "Notes",
-        "n_genes_by_counts_raw",
-        "total_counts_raw",
-        "total_counts_mt_raw",
-        "pct_counts_mt_raw",
-        "n_genes_by_counts_cb",
-        "total_counts_cb",
-        "total_counts_mt_cb",
-        "pct_counts_mt_cb",
+    for suffix in ["_raw", "_cb"]:
+        for metric in ["n_genes_by_counts", "total_counts", "total_counts", "pct_counts_mt"]:
+            name = metric + suffix
+            if name in adata.obs:
+                order_by.append(name)
+
+    order_by.extend([
         "doublet_score",
         "predicted_doublet",
         "background_fraction",
         "cell_probability",
         "cell_size",
         "droplet_efficiency",
-    ]
+    ])
+
+    adata_key_set = adata.obs.keys()
+    missing = set(order_by).difference(adata_key_set)
+    if len(missing) > 0:
+        print("These keys were not found in the adata.obs columns {}".format(
+            ", ".join(sorted(missing))))
+
+    keys = [x for x in order_by if x in adata_key_set]
 
     if not is_dummy(genotypes):
         adata.obs = adata.obs[keys]
