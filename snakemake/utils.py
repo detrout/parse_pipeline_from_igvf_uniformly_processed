@@ -1017,7 +1017,13 @@ def save_multiplexed_processed_h5ad(adata, genotypes, ofile):
             columns=["Multiplexed_sample1", "Multiplexed_sample2"], inplace=True
         )
 
-        adata.obs = adata.obs[keys]
+        try:
+            adata.obs = adata.obs[keys]
+        except KeyError as e:
+            print(e)
+            print("**ERRROR** unable to filter keys {}".format(", ".join(keys)))
+            print("Continuing but examine the file and fix the code")
+
         print(adata.obs.head())
         print(adata.var.head())
 
